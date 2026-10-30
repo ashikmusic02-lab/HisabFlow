@@ -11,7 +11,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -23,15 +22,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.local.TransactionEntity
+import com.example.data.local.UserPreferences
+import com.example.model.AppStrings
+import com.example.model.DateHelper
 import com.example.model.TransactionType
 import com.example.ui.MainViewModel
-import com.example.ui.ads.AppOpenAdDialog
-import com.example.ui.ads.InterstitialAdDialog
-import com.example.ui.ads.RewardedAdDialog
-import com.example.ui.components.BannerAdBar
 import com.example.ui.components.HisabBottomNav
 import com.example.ui.components.HisabTopBar
 import com.example.ui.components.PinLockScreen
@@ -44,9 +44,19 @@ import com.example.ui.screens.TransactionsScreen
 import com.example.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
+    private lateinit var userPreferences: UserPreferences
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        userPreferences = UserPreferences(this)
+        lifecycle.addObserver(LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                userPreferences.lockApp()
+            }
+        })
+
         setContent {
             val mainViewModel: MainViewModel = viewModel()
             val prefsState by mainViewModel.prefsState.collectAsStateWithLifecycle()
@@ -87,12 +97,6 @@ fun MainAppContent(
     // Pin setup modal state
     var isSettingUpPin by remember { mutableStateOf(false) }
 
-    // AdMob States
-    var showInterstitialAd by remember { mutableStateOf(false) }
-    var showRewardedAd by remember { mutableStateOf(false) }
-    var showAppOpenAd by remember { mutableStateOf(false) }
-    var transactionSaveCounter by remember { mutableIntStateOf(0) }
-
     // Handle Hardware Back Button
     if (selectedTab != 0) {
         BackHandler {
@@ -104,11 +108,11 @@ fun MainAppContent(
     if (prefsState.isPinEnabled && !prefsState.isUnlocked) {
         PinLockScreen(
             title = "HisabFlow",
-            subtitle = if (prefsState.language == "bn") "আনলক করতে ৪-সংখ্যার পিন দিন" else "Enter 4-digit PIN to Unlock",
+            subtitle = AppStrings.get("pin_unlock_subtitle", prefsState.language),
             language = prefsState.language,
+            remainingLockoutSeconds = prefsState.remainingLockoutSeconds,
             onPinEntered = { pin ->
-                val ok = viewModel.preferences.verifyPin(pin)
-                ok
+                viewModel.preferences.verifyPin(pin)
             }
         )
         return
@@ -117,13 +121,13 @@ fun MainAppContent(
     // Check if user is in PIN Setup Screen
     if (isSettingUpPin) {
         PinLockScreen(
-            title = if (prefsState.language == "bn") "নতুন পিন সেট করুন" else "Set Security PIN",
-            subtitle = if (prefsState.language == "bn") "৪-সংখ্যার গোপন পিন লিখুন" else "Enter 4-digit new PIN",
+            title = AppStrings.get("pin_setup_title", prefsState.language),
+            subtitle = AppStrings.get("pin_setup_subtitle", prefsState.language),
             language = prefsState.language,
             onPinEntered = { pin ->
                 viewModel.preferences.setPin(pin)
                 isSettingUpPin = false
-                val msg = if (prefsState.language == "bn") "পিন সফলভাবে সক্রিয় করা হয়েছে" else "PIN Lock enabled successfully"
+                val msg = AppStrings.get("pin_success_enabled", prefsState.language)
                 Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                 true
             },
@@ -145,14 +149,11 @@ fun MainAppContent(
             )
         },
         bottomBar = {
-            Column {
-                BannerAdBar()
-                HisabBottomNav(
-                    selectedTab = selectedTab,
-                    onTabSelected = { selectedTab = it },
-                    language = prefsState.language
-                )
-            }
+            HisabBottomNav(
+                selectedTab = selectedTab,
+                onTabSelected = { selectedTab = it },
+                language = prefsState.language
+            )
         }
     ) { innerPadding ->
         Box(
@@ -235,8 +236,7 @@ fun MainAppContent(
                         onDeleteGoal = { viewModel.deleteSavingsGoal(it) },
                         onAddDebt = { type, person, amt, note, due -> viewModel.addDebt(type, person, amt, note, due) },
                         onToggleDebtSettled = { viewModel.toggleDebtSettled(it) },
-                        onDeleteDebt = { viewModel.deleteDebt(it) },
-                        onWatchRewardedAd = { showRewardedAd = true }
+                        onDeleteDebt = { viewModel.deleteDebt(it) }
                     )
 
                     4 -> SettingsScreen(
@@ -252,7 +252,7 @@ fun MainAppContent(
                         onOpenPinSetup = { isSettingUpPin = true },
                         onRemovePin = {
                             viewModel.preferences.removePin()
-                            val msg = if (prefsState.language == "bn") "পিন সরানো হয়েছে" else "PIN Lock removed"
+                            val msg = AppStrings.get("pin_removed", prefsState.language)
                             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                         },
                         onUpdateAccountBalance = { account, bal -> viewModel.updateAccountBalance(account, bal) },
@@ -260,10 +260,7 @@ fun MainAppContent(
                             viewModel.resetFinancialData()
                             val msg = if (prefsState.language == "bn") "সমস্ত ডেটা রিসেট হয়েছে" else "All financial data has been reset"
                             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                        },
-                        onShowInterstitialTest = { showInterstitialAd = true },
-                        onShowRewardedTest = { showRewardedAd = true },
-                        onShowAppOpenTest = { showAppOpenAd = true }
+                        }
                     )
                 }
             }
@@ -276,7 +273,8 @@ fun MainAppContent(
             onDismiss = { showAddTransactionSheet = false },
             onSave = { type, amount, category, account, toAccount, dateMillis, desc, person ->
                 if (editingTransaction != null) {
-                    val updated = editingTransaction!!.copy(
+                    val oldTx = editingTransaction!!
+                    val updated = oldTx.copy(
                         type = type,
                         amount = amount,
                         category = category,
@@ -284,9 +282,10 @@ fun MainAppContent(
                         toAccount = toAccount,
                         dateMillis = dateMillis,
                         description = desc,
-                        person = person
+                        person = person,
+                        yearMonth = DateHelper.getYearMonthFromMillis(dateMillis)
                     )
-                    viewModel.updateTransaction(updated)
+                    viewModel.updateTransaction(oldTx, updated)
                 } else {
                     viewModel.addTransaction(
                         type = type,
@@ -299,12 +298,6 @@ fun MainAppContent(
                         person = person
                     )
                 }
-
-                // Show Interstitial Ad every 2 transactions saved
-                transactionSaveCounter++
-                if (transactionSaveCounter % 2 == 0) {
-                    showInterstitialAd = true
-                }
             },
             currencyCode = prefsState.currencyCode,
             language = prefsState.language,
@@ -312,26 +305,5 @@ fun MainAppContent(
             initialType = initialAddType,
             editingTransaction = editingTransaction
         )
-    }
-
-    // AdMob Interstitial Ad Dialog
-    if (showInterstitialAd) {
-        InterstitialAdDialog(onDismiss = { showInterstitialAd = false })
-    }
-
-    // AdMob Rewarded Video Ad Dialog
-    if (showRewardedAd) {
-        RewardedAdDialog(
-            onRewardEarned = {
-                val msg = if (prefsState.language == "bn") "পুরস্কার আনলক হয়েছে! মাসিক স্টেটমেন্ট প্রস্তুত।" else "Reward unlocked! Monthly statement generated."
-                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-            },
-            onDismiss = { showRewardedAd = false }
-        )
-    }
-
-    // AdMob App Open Ad Dialog
-    if (showAppOpenAd) {
-        AppOpenAdDialog(onDismiss = { showAppOpenAd = false })
     }
 }

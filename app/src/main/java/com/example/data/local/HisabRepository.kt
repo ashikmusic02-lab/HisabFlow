@@ -1,5 +1,7 @@
 package com.example.data.local
 
+import androidx.room.withTransaction
+import com.example.model.TransactionType
 import kotlinx.coroutines.flow.Flow
 
 class HisabRepository(private val database: AppDatabase) {
@@ -20,29 +22,69 @@ class HisabRepository(private val database: AppDatabase) {
     fun getTransactionsByYear(yearPrefix: String): Flow<List<TransactionEntity>> =
         transactionDao.getTransactionsByYear(yearPrefix)
 
-    suspend fun insertTransaction(transaction: TransactionEntity): Long {
+    suspend fun insertTransaction(transaction: TransactionEntity): Long = database.withTransaction {
         val id = transactionDao.insertTransaction(transaction)
-        // Also update account balance if relevant
         adjustAccountBalance(transaction, isAdding = true)
-        return id
+        id
     }
 
-    suspend fun updateTransaction(oldTransaction: TransactionEntity, newTransaction: TransactionEntity) {
+    suspend fun updateTransaction(oldTransaction: TransactionEntity, newTransaction: TransactionEntity) = database.withTransaction {
         adjustAccountBalance(oldTransaction, isAdding = false)
         transactionDao.updateTransaction(newTransaction)
         adjustAccountBalance(newTransaction, isAdding = true)
     }
 
-    suspend fun deleteTransaction(transaction: TransactionEntity) {
+    suspend fun deleteTransaction(transaction: TransactionEntity) = database.withTransaction {
         transactionDao.deleteTransaction(transaction)
         adjustAccountBalance(transaction, isAdding = false)
     }
 
     private suspend fun adjustAccountBalance(transaction: TransactionEntity, isAdding: Boolean) {
-        // Find matching account or update bank account
-        // If EXPENSE: adding transaction subtracts amount from account
-        // If INCOME: adding transaction adds amount to account
-        // If TRANSFER: adjusts from and to
+        val multiplier = if (isAdding) 1.0 else -1.0
+        val amount = transaction.amount
+        if (amount == 0.0) return
+
+        when (transaction.type) {
+            TransactionType.INCOME.name -> {
+                // Income adds to account balance
+                val delta = amount * multiplier
+                updateAccountDelta(transaction.account, delta)
+            }
+            TransactionType.EXPENSE.name -> {
+                // Expense subtracts from account balance
+                val delta = -amount * multiplier
+                updateAccountDelta(transaction.account, delta)
+            }
+            TransactionType.TRANSFER.name -> {
+                // Transfer subtracts from source and adds to destination
+                val sourceDelta = -amount * multiplier
+                updateAccountDelta(transaction.account, sourceDelta)
+
+                val toAccount = transaction.toAccount
+                if (!toAccount.isNullOrBlank()) {
+                    val destDelta = amount * multiplier
+                    updateAccountDelta(toAccount, destDelta)
+                }
+            }
+        }
+    }
+
+    private suspend fun updateAccountDelta(accountName: String, delta: Double) {
+        val normalizedName = accountName.trim()
+        val account = (if (normalizedName.isNotEmpty()) accountDao.getAccountByName(normalizedName) else null)
+            ?: accountDao.getFirstAccount()
+            ?: run {
+                val created = AccountEntity(
+                    name = if (normalizedName.isNotEmpty()) normalizedName else "bank account",
+                    type = "BANK",
+                    balance = 0.0
+                )
+                val newId = accountDao.insertAccount(created)
+                created.copy(id = newId)
+            }
+
+        val newBalance = account.balance + delta
+        accountDao.updateAccount(account.copy(balance = newBalance))
     }
 
     // Budgets
@@ -116,16 +158,19 @@ class HisabRepository(private val database: AppDatabase) {
     suspend fun updateAccount(account: AccountEntity) =
         accountDao.updateAccount(account)
 
-    suspend fun clearAllData() {
+    suspend fun clearAllData() = database.withTransaction {
         transactionDao.clearAll()
         budgetDao.clearAll()
         monthPlanDao.clearAll()
         savingsGoalDao.clearAll()
         debtDao.clearAll()
         accountDao.clearAll()
-        // Re-add default bank account
+        // Re-add default bank and cash accounts
         accountDao.insertAccount(
             AccountEntity(name = "bank account", type = "BANK", balance = 0.0)
+        )
+        accountDao.insertAccount(
+            AccountEntity(name = "Cash", type = "CASH", balance = 0.0)
         )
     }
 }

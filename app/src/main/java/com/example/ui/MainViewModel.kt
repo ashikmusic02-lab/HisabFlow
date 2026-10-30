@@ -53,8 +53,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val prefsState: StateFlow<UserPreferencesState> = preferences.state
 
-    // Active Year-Month for filtering (e.g., "2026-10")
-    private val _selectedYearMonth = MutableStateFlow("2026-10")
+    // Active Year-Month for filtering (e.g., dynamically "2026-10" or current month)
+    private val _selectedYearMonth = MutableStateFlow(DateHelper.getCurrentYearMonth())
     val selectedYearMonth: StateFlow<String> = _selectedYearMonth.asStateFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -167,7 +167,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         person: String? = null
     ) {
         viewModelScope.launch {
-            val ym = _selectedYearMonth.value
+            val ym = DateHelper.getYearMonthFromMillis(dateMillis)
             repository.insertTransaction(
                 TransactionEntity(
                     type = type,
@@ -184,9 +184,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun updateTransaction(transaction: TransactionEntity) {
+    fun updateTransaction(oldTransaction: TransactionEntity, newTransaction: TransactionEntity) {
         viewModelScope.launch {
-            repository.updateTransaction(transaction, transaction)
+            val ym = DateHelper.getYearMonthFromMillis(newTransaction.dateMillis)
+            repository.updateTransaction(oldTransaction, newTransaction.copy(yearMonth = ym))
         }
     }
 

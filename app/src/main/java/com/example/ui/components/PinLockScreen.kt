@@ -27,7 +27,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -42,21 +44,34 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.AppStrings
+import com.example.model.toBengaliDigits
 import com.example.ui.theme.ExpenseRed
 import com.example.ui.theme.PrimaryIndigo
 import com.example.ui.theme.PrimaryPurple
+import kotlinx.coroutines.delay
 
 @Composable
 fun PinLockScreen(
     title: String = "HisabFlow",
     subtitle: String = "Enter 4-digit PIN to Unlock",
     language: String = "en",
+    remainingLockoutSeconds: Int = 0,
     onPinEntered: (String) -> Boolean,
     onCancel: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var enteredPin by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
+    var localLockoutSec by remember(remainingLockoutSeconds) { mutableIntStateOf(remainingLockoutSeconds) }
+
+    LaunchedEffect(localLockoutSec) {
+        if (localLockoutSec > 0) {
+            delay(1000)
+            localLockoutSec--
+        }
+    }
+
+    val isLockedOut = localLockoutSec > 0
 
     Box(
         modifier = modifier
@@ -119,11 +134,20 @@ fun PinLockScreen(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
+                val statusText = when {
+                    isLockedOut -> {
+                        val secStr = if (language == "bn") localLockoutSec.toString().toBengaliDigits() else localLockoutSec.toString()
+                        AppStrings.get("pin_lockout", language) + secStr + AppStrings.get("pin_seconds", language)
+                    }
+                    isError -> AppStrings.get("pin_incorrect", language)
+                    else -> subtitle
+                }
+
                 Text(
-                    text = if (isError) (if (language == "bn") "ভুল পিন! আবার চেষ্টা করুন" else "Incorrect PIN! Try again") else subtitle,
+                    text = statusText,
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        color = if (isError) ExpenseRed else MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = if (isError) FontWeight.SemiBold else FontWeight.Normal
+                        color = if (isError || isLockedOut) ExpenseRed else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = if (isError || isLockedOut) FontWeight.SemiBold else FontWeight.Normal
                     )
                 )
 
@@ -142,14 +166,14 @@ fun PinLockScreen(
                                 .clip(CircleShape)
                                 .background(
                                     when {
-                                        isError -> ExpenseRed
+                                        isError || isLockedOut -> ExpenseRed
                                         isFilled -> PrimaryIndigo
                                         else -> MaterialTheme.colorScheme.surfaceVariant
                                     }
                                 )
                                 .border(
                                     width = 2.dp,
-                                    color = if (isError) ExpenseRed else if (isFilled) PrimaryIndigo else MaterialTheme.colorScheme.outline,
+                                    color = if (isError || isLockedOut) ExpenseRed else if (isFilled) PrimaryIndigo else MaterialTheme.colorScheme.outline,
                                     shape = CircleShape
                                 )
                         )
@@ -204,7 +228,7 @@ fun PinLockScreen(
                                         modifier = Modifier
                                             .size(70.dp)
                                             .clip(CircleShape)
-                                            .clickable {
+                                            .clickable(enabled = !isLockedOut) {
                                                 if (enteredPin.isNotEmpty()) {
                                                     enteredPin = enteredPin.dropLast(1)
                                                     isError = false
@@ -215,20 +239,21 @@ fun PinLockScreen(
                                         Icon(
                                             imageVector = Icons.AutoMirrored.Filled.Backspace,
                                             contentDescription = "Backspace",
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            tint = if (isLockedOut) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(24.dp)
                                         )
                                     }
                                 }
                                 else -> {
+                                    val displayDigit = if (language == "bn") digit.toBengaliDigits() else digit
                                     Surface(
                                         shape = CircleShape,
-                                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                                        color = if (isLockedOut) MaterialTheme.colorScheme.surface.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
                                         modifier = Modifier
                                             .size(70.dp)
-                                            .shadow(2.dp, CircleShape)
+                                            .shadow(if (isLockedOut) 0.dp else 2.dp, CircleShape)
                                             .clip(CircleShape)
-                                            .clickable {
+                                            .clickable(enabled = !isLockedOut) {
                                                 if (enteredPin.length < 4) {
                                                     val next = enteredPin + digit
                                                     enteredPin = next
@@ -246,10 +271,10 @@ fun PinLockScreen(
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
                                             Text(
-                                                text = digit,
+                                                text = displayDigit,
                                                 style = MaterialTheme.typography.headlineMedium.copy(
                                                     fontWeight = FontWeight.SemiBold,
-                                                    color = MaterialTheme.colorScheme.onSurface
+                                                    color = if (isLockedOut) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f) else MaterialTheme.colorScheme.onSurface
                                                 )
                                             )
                                         }

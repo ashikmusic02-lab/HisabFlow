@@ -86,7 +86,6 @@ fun ReportsScreen(
     onAddDebt: (type: String, person: String, amount: Double, note: String?, dueDate: Long?) -> Unit,
     onToggleDebtSettled: (DebtEntity) -> Unit,
     onDeleteDebt: (DebtEntity) -> Unit,
-    onWatchRewardedAd: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var isYearlyView by remember { mutableStateOf(false) }
@@ -784,58 +783,6 @@ fun ReportsScreen(
                                 }
                             }
                         }
-                    }
-                }
-            }
-        }
-
-        // Section: Export Financial Statement (Rewarded Ad Integration)
-        item {
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.surface,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(1.dp, RoundedCornerShape(18.dp))
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (language == "bn") "মাসিক স্টেটমেন্ট ডাউনলোড" else "Export Monthly Statement",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        )
-                        Text(
-                            text = if (language == "bn") "একটি ছোট ভিডিও বিজ্ঞাপন দেখে সম্পূর্ণ PDF/Excel রিপোর্ট আনলক করুন" else "Watch a short rewarded ad to unlock and download full statement",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 11.sp
-                            )
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Button(
-                        onClick = onWatchRewardedAd,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryIndigo)
-                    ) {
-                        Text(
-                            text = if (language == "bn") "ভিডিও দেখুন" else "Watch Ad",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        )
                     }
                 }
             }

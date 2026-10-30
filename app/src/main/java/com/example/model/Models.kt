@@ -60,6 +60,19 @@ fun String.toCleanEnglishDigits(): String {
         .trim()
 }
 
+fun String.toBengaliDigits(): String {
+    return this.replace('0', '০')
+        .replace('1', '১')
+        .replace('2', '২')
+        .replace('3', '৩')
+        .replace('4', '৪')
+        .replace('5', '৫')
+        .replace('6', '৬')
+        .replace('7', '৭')
+        .replace('8', '৮')
+        .replace('9', '৯')
+}
+
 fun String.toCleanDoubleOrNull(): Double? {
     return this.toCleanEnglishDigits().toDoubleOrNull()
 }
@@ -113,8 +126,8 @@ object QuickAddParser {
 
 object CurrencyHelper {
     val supportedCurrencies = listOf(
-        "SAR (﷼)" to "﷼",
         "BDT (৳)" to "৳",
+        "SAR (﷼)" to "﷼",
         "USD ($)" to "$",
         "EUR (€)" to "€",
         "INR (₹)" to "₹",
@@ -124,10 +137,10 @@ object CurrencyHelper {
 
     fun getSymbol(currencyCode: String): String {
         return supportedCurrencies.find { it.first == currencyCode }?.second
-            ?: currencyCode.substringAfter("(").substringBefore(")").ifEmpty { "﷼" }
+            ?: currencyCode.substringAfter("(").substringBefore(")").ifEmpty { "৳" }
     }
 
-    fun format(amount: Double, currencyCode: String, isPrivacyHidden: Boolean = false): String {
+    fun format(amount: Double, currencyCode: String, isPrivacyHidden: Boolean = false, language: String = "en"): String {
         val symbol = getSymbol(currencyCode)
         if (isPrivacyHidden) {
             return "•••• $symbol"
@@ -137,10 +150,11 @@ object CurrencyHelper {
         } else {
             String.format(Locale.US, "%,.2f", amount)
         }
-        return "$formatted $symbol"
+        val finalNumber = if (language == "bn") formatted.toBengaliDigits() else formatted
+        return "$finalNumber $symbol"
     }
 
-    fun formatCompact(amount: Double, currencyCode: String, isPrivacyHidden: Boolean = false): String {
+    fun formatCompact(amount: Double, currencyCode: String, isPrivacyHidden: Boolean = false, language: String = "en"): String {
         val symbol = getSymbol(currencyCode)
         if (isPrivacyHidden) return "•••• $symbol"
         val formatted = if (amount % 1.0 == 0.0) {
@@ -148,42 +162,61 @@ object CurrencyHelper {
         } else {
             String.format(Locale.US, "%.1f", amount)
         }
-        return "$formatted $symbol"
+        val finalNumber = if (language == "bn") formatted.toBengaliDigits() else formatted
+        return "$finalNumber $symbol"
     }
 }
 
 object DateHelper {
-    private val monthFormat = SimpleDateFormat("MMMM yyyy", Locale.US)
-    private val yearMonthFormat = SimpleDateFormat("yyyy-MM", Locale.US)
-    private val dateFormat = SimpleDateFormat("MM/dd/yyyy", Locale.US)
-    private val timeFormat = SimpleDateFormat("hh:mm a", Locale.US)
-    private val readableDateFormat = SimpleDateFormat("EEE, dd MMM yyyy", Locale.US)
+    private fun getLocale(language: String): Locale = if (language == "bn") Locale("bn") else Locale.ENGLISH
 
-    fun formatYearMonthDisplay(yearMonth: String): String {
+    fun formatYearMonthDisplay(yearMonth: String, language: String = "en"): String {
         return try {
-            val date = yearMonthFormat.parse(yearMonth) ?: Date()
-            monthFormat.format(date)
+            val parser = SimpleDateFormat("yyyy-MM", Locale.US)
+            val date = parser.parse(yearMonth) ?: Date()
+            val formatter = SimpleDateFormat("MMMM yyyy", getLocale(language))
+            val result = formatter.format(date)
+            if (language == "bn") result.toBengaliDigits() else result
         } catch (e: Exception) {
-            yearMonth
+            if (language == "bn") yearMonth.toBengaliDigits() else yearMonth
         }
     }
 
-    fun formatYearMonthShort(yearMonth: String): String {
+    fun formatYearMonthShort(yearMonth: String, language: String = "en"): String {
         return try {
-            val date = yearMonthFormat.parse(yearMonth) ?: Date()
-            SimpleDateFormat("MMM yyyy", Locale.US).format(date).uppercase()
+            val parser = SimpleDateFormat("yyyy-MM", Locale.US)
+            val date = parser.parse(yearMonth) ?: Date()
+            val formatter = SimpleDateFormat("MMM yyyy", getLocale(language))
+            val result = formatter.format(date).uppercase()
+            if (language == "bn") result.toBengaliDigits() else result
         } catch (e: Exception) {
             yearMonth.uppercase()
         }
     }
 
-    fun getCurrentYearMonth(): String = yearMonthFormat.format(Date())
+    fun getCurrentYearMonth(): String = SimpleDateFormat("yyyy-MM", Locale.US).format(Date())
 
-    fun formatDate(millis: Long): String = dateFormat.format(Date(millis))
+    fun getYearMonthFromMillis(millis: Long): String {
+        return SimpleDateFormat("yyyy-MM", Locale.US).format(Date(millis))
+    }
 
-    fun formatTime(millis: Long): String = timeFormat.format(Date(millis))
+    fun formatDate(millis: Long, language: String = "en"): String {
+        val formatter = SimpleDateFormat("MM/dd/yyyy", getLocale(language))
+        val str = formatter.format(Date(millis))
+        return if (language == "bn") str.toBengaliDigits() else str
+    }
 
-    fun formatReadableDate(millis: Long): String = readableDateFormat.format(Date(millis))
+    fun formatTime(millis: Long, language: String = "en"): String {
+        val formatter = SimpleDateFormat("hh:mm a", getLocale(language))
+        val str = formatter.format(Date(millis))
+        return if (language == "bn") str.toBengaliDigits() else str
+    }
+
+    fun formatReadableDate(millis: Long, language: String = "en"): String {
+        val formatter = SimpleDateFormat("EEE, dd MMM yyyy", getLocale(language))
+        val str = formatter.format(Date(millis))
+        return if (language == "bn") str.toBengaliDigits() else str
+    }
 
     fun getDaysLeftInMonth(yearMonth: String): Int {
         val cal = Calendar.getInstance()
@@ -204,7 +237,7 @@ object DateHelper {
     fun getDaysInMonth(yearMonth: String): Int {
         return try {
             val cal = Calendar.getInstance()
-            cal.time = yearMonthFormat.parse(yearMonth) ?: Date()
+            cal.time = SimpleDateFormat("yyyy-MM", Locale.US).parse(yearMonth) ?: Date()
             cal.getActualMaximum(Calendar.DAY_OF_MONTH)
         } catch (e: Exception) {
             30
@@ -214,12 +247,12 @@ object DateHelper {
     fun getAvailableMonths(): List<String> {
         val list = mutableListOf<String>()
         val cal = Calendar.getInstance()
-        // Anchor around October 2026 as shown in screenshot
-        cal.set(2026, Calendar.OCTOBER, 1)
+        // Anchor to current month so the app dynamically tracks current time
+        val formatter = SimpleDateFormat("yyyy-MM", Locale.US)
         for (i in -6..6) {
             val temp = cal.clone() as Calendar
             temp.add(Calendar.MONTH, i)
-            list.add(yearMonthFormat.format(temp.time))
+            list.add(formatter.format(temp.time))
         }
         return list
     }
@@ -312,10 +345,19 @@ object AppStrings {
             "bank_tap_edit" -> if (isBn) "ব্যাংক • ট্যাপ করে পরিবর্তন করুন" else "BANK • TAP TO EDIT"
             "about_legal" -> if (isBn) "অ্যাপ সম্পর্কিত ও নীতিমালা" else "About & Legal"
             "privacy_policy" -> if (isBn) "গোপনীয়তা নীতি (Privacy Policy)" else "Privacy Policy"
-            "privacy_policy_desc" -> if (isBn) "আপনার ডেটা সুরক্ষা ও বিজ্ঞাপন নীতিমালা" else "Your data security & ad policy"
+            "privacy_policy_desc" -> if (isBn) "আপনার ডেটা সুরক্ষা নীতিমালা" else "Your data security & privacy policy"
             "terms_conditions" -> if (isBn) "শর্তাবলী (Terms & Conditions)" else "Terms & Conditions"
             "terms_conditions_desc" -> if (isBn) "অ্যাপ ব্যবহারের সাধারণ নিয়মাবলী" else "General terms of service"
             "app_version" -> if (isBn) "অ্যাপ সংস্করণ" else "App Version"
+            "pin_title" -> "HisabFlow"
+            "pin_unlock_subtitle" -> if (isBn) "আনলক করতে ৪-সংখ্যার পিন দিন" else "Enter 4-digit PIN to Unlock"
+            "pin_setup_title" -> if (isBn) "নতুন পিন সেট করুন" else "Set Security PIN"
+            "pin_setup_subtitle" -> if (isBn) "৪-সংখ্যার গোপন পিন লিখুন" else "Enter 4-digit new PIN"
+            "pin_incorrect" -> if (isBn) "ভুল পিন! আবার চেষ্টা করুন" else "Incorrect PIN! Try again"
+            "pin_lockout" -> if (isBn) "অতিরিক্ত ভুল পিন! অপেক্ষা করুন: " else "Too many failed attempts! Wait: "
+            "pin_seconds" -> if (isBn) " সেকেন্ড" else " seconds"
+            "pin_success_enabled" -> if (isBn) "পিন সফলভাবে সক্রিয় করা হয়েছে" else "PIN Lock enabled successfully"
+            "pin_removed" -> if (isBn) "পিন সরানো হয়েছে" else "PIN Lock removed"
             else -> key
         }
     }

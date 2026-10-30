@@ -68,9 +68,6 @@ fun SettingsScreen(
     onRemovePin: () -> Unit,
     onUpdateAccountBalance: (AccountEntity, Double) -> Unit,
     onResetAllData: () -> Unit,
-    onShowInterstitialTest: () -> Unit = {},
-    onShowRewardedTest: () -> Unit = {},
-    onShowAppOpenTest: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showResetConfirmDialog by remember { mutableStateOf(false) }
@@ -676,9 +673,9 @@ fun SettingsScreen(
                 ) {
                     Text(
                         text = if (language == "bn")
-                            "১. স্থানীয় ডেটা সংরক্ষণ:\nHisabFlow সম্পূর্ণ অফলাইন ফাইন্যান্স অ্যাপ। আপনার সমস্ত লেনদেন, বাজেট এবং ব্যক্তিগত হিসাব শুধুমাত্র আপনার নিজস্ব ডিভাইসের লোকাল মেমরিতে (SQLite) সংরক্ষিত থাকে। কোনো অনলাইন ক্লাউড বা সার্ভারে কোনো ডেটা প্রেরণ করা হয় না।\n\n২. বিজ্ঞাপন ও তৃতীয় পক্ষ:\nঅ্যাপটিতে বিজ্ঞাপন পরিবেশনের জন্য Google AdMob SDK ব্যবহৃত হতে পারে। গুগল ব্যক্তিগতকৃত বা অপ্রাসঙ্গিক বিজ্ঞাপন পরিবেশনের উদ্দেশ্যে সাধারণ ডিভাইস আইডেন্টিফায়ার (GAID) ব্যবহার করতে পারে।\n\n৩. আপনার নিরাপত্তা:\n৪-ডিজিটের স্থানীয় পিন লক সুরক্ষার মাধ্যমে আপনার ডেটা সুরক্ষিত রাখা হয়।"
+                            "১. স্থানীয় ডেটা সংরক্ষণ:\nHisabFlow সম্পূর্ণ অফলাইন ফাইন্যান্স অ্যাপ। আপনার সমস্ত লেনদেন, বাজেট এবং ব্যক্তিগত হিসাব শুধুমাত্র আপনার নিজস্ব ডিভাইসের লোকাল মেমরিতে (SQLite) সংরক্ষিত থাকে। কোনো অনলাইন ক্লাউড বা সার্ভারে কোনো ডেটা প্রেরণ করা হয় না।\n\n২. বিজ্ঞাপন ও ট্র্যাকার মুক্ত:\nঅ্যাপটিতে কোনো বিজ্ঞাপন, অ্যানালিটিক্স বা ট্র্যাকিং কোড নেই। আপনার আর্থিক তথ্য সম্পূর্ণ ব্যক্তিগত ও নিরাপদ।\n\n৩. আপনার নিরাপত্তা:\nলবণের সাথে সল্টেড হ্যাশ ও ৫ বার ভুল পিনে লকআউট সুরক্ষার মাধ্যমে আপনার ডেটা সর্বোচ্চ নিরাপদে সুরক্ষিত রাখা হয়।"
                         else
-                            "1. Local Data Storage:\nHisabFlow is a 100% offline personal finance app. All your transactions, budgets, goals, and records are stored exclusively on your device's local memory (SQLite). No financial data is ever transmitted to external servers.\n\n2. Advertising Policy:\nThe app may use Google AdMob SDK to serve advertisements. Google may process standard device identifiers (GAID) to deliver relevant ad content.\n\n3. Security:\nInstant secure 4-digit PIN lock keeps your financial data strictly private on your device.",
+                            "1. Local Data Storage:\nHisabFlow is a 100% offline personal finance app. All your transactions, budgets, goals, and records are stored exclusively on your device's local memory (SQLite). No financial data is ever transmitted to external servers.\n\n2. Ad-Free & Tracker-Free:\nThere are zero advertisements, third-party trackers, or analytics in the application. Your financial data is private and confidential.\n\n3. Security:\nSalted cryptographic hashing and 5-attempt progressive lockout protect your data at rest on your device.",
                         style = MaterialTheme.typography.bodySmall.copy(lineHeight = 18.sp)
                     )
                 }
