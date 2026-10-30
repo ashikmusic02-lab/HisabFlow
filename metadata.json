@@ -1,0 +1,6 @@
+{
+  "name": "HisabFlow",
+  "description": "100% offline and secure personal finance and budget manager with monthly summaries, analytics, PIN protection, and multi-currency support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

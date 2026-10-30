@@ -1,0 +1,67 @@
+name: Build Android APK and AAB (Play Store)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Generate APK & AAB
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Grant Execute Permission for Gradlew
+        run: chmod +x gradlew
+
+      - name: Prepare Signing Keystore
+        run: |
+          echo "Preparing upload keystore for release build..."
+          keytool -genkey -v \
+            -keystore my-upload-key.jks \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -alias upload \
+            -storepass android \
+            -keypass android \
+            -dname "CN=HisabFlow, OU=Mobile, O=HisabFlow, L=Dhaka, S=Dhaka, C=BD"
+          cp my-upload-key.jks debug.keystore
+
+      - name: Build Debug & Release APK
+        env:
+          STORE_PASSWORD: "android"
+          KEY_PASSWORD: "android"
+        run: ./gradlew assembleDebug assembleRelease --stacktrace
+
+      - name: Build Google Play AAB (Android App Bundle)
+        env:
+          STORE_PASSWORD: "android"
+          KEY_PASSWORD: "android"
+        run: ./gradlew bundleRelease --stacktrace
+
+      - name: Upload APKs as Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: HisabFlow-APKs
+          path: app/build/outputs/apk/**/*.apk
+
+      - name: Upload AAB (Play Store Bundle) as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HisabFlow-PlayStore-AAB
+          path: app/build/outputs/bundle/**/*.aab
