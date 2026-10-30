@@ -63,6 +63,7 @@ import com.example.data.local.BudgetEntity
 import com.example.model.AppStrings
 import com.example.model.CategoryList
 import com.example.model.CurrencyHelper
+import com.example.model.toCleanDoubleOrNull
 import com.example.ui.FinancialSummary
 import com.example.ui.theme.ExpenseRed
 import com.example.ui.theme.IncomeGreen
@@ -492,7 +493,7 @@ fun BudgetScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        val amount = salaryInput.toDoubleOrNull() ?: 0.0
+                        val amount = salaryInput.toCleanDoubleOrNull() ?: 0.0
                         onSetExpectedSalary(amount)
                         showSalaryDialog = false
                     }
@@ -574,10 +575,14 @@ fun BudgetScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        val amount = categoryAllocatedInput.toDoubleOrNull() ?: 0.0
+                        val amount = categoryAllocatedInput.toCleanDoubleOrNull() ?: 0.0
                         if (amount > 0) {
                             onAddBudgetCategory(selectedCategory, amount)
+                            categoryAllocatedInput = ""
                             showAddCategoryDialog = false
+                        } else {
+                            val msg = if (language == "bn") "দয়া করে বাজেটের পরিমাণ লিখুন" else "Please enter budget amount"
+                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                         }
                     }
                 ) {

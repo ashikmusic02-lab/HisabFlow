@@ -257,9 +257,11 @@ fun HisabBottomNav(
                 label = {
                     Text(
                         text = label,
+                        maxLines = 1,
+                        softWrap = false,
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                            fontSize = 11.sp
+                            fontSize = 10.sp
                         )
                     )
                 },
@@ -433,6 +435,54 @@ fun AvailableBalanceCard(
 }
 
 @Composable
+fun rememberIsOnline(): Boolean {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val connectivityManager = remember {
+        context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+    }
+    var isOnline by remember {
+        mutableStateOf(
+            connectivityManager?.let { cm ->
+                val activeNetwork = cm.activeNetwork ?: return@let false
+                val caps = cm.getNetworkCapabilities(activeNetwork) ?: return@let false
+                caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            } ?: false
+        )
+    }
+
+    androidx.compose.runtime.DisposableEffect(connectivityManager) {
+        if (connectivityManager == null) return@DisposableEffect onDispose {}
+
+        val callback = object : android.net.ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: android.net.Network) {
+                isOnline = true
+            }
+            override fun onLost(network: android.net.Network) {
+                isOnline = false
+            }
+        }
+        val request = android.net.NetworkRequest.Builder()
+            .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        try {
+            connectivityManager.registerNetworkCallback(request, callback)
+        } catch (e: Exception) {
+            // ignore
+        }
+
+        onDispose {
+            try {
+                connectivityManager.unregisterNetworkCallback(callback)
+            } catch (e: Exception) {
+                // ignore
+            }
+        }
+    }
+
+    return isOnline
+}
+
+@Composable
 fun WaterWaveCanvas(
     modifier: Modifier = Modifier,
     fillLevel: Float = 0.45f
@@ -451,12 +501,13 @@ fun WaterWaveCanvas(
     Canvas(modifier = modifier) {
         val width = size.width
         val height = size.height
-        val baseWaterHeight = height * (1f - fillLevel)
+        if (width <= 0f || height <= 0f) return@Canvas
 
+        val baseWaterHeight = height * (1f - fillLevel)
         val wavePath1 = Path()
         val wavePath2 = Path()
 
-        val waveLength = width * 0.8f
+        val waveLength = (width * 0.8f).coerceAtLeast(10f)
         val amplitude = 22f
 
         wavePath1.moveTo(0f, height)
@@ -512,6 +563,10 @@ fun WaterWaveCanvas(
 fun BannerAdBar(
     modifier: Modifier = Modifier
 ) {
+    val isOnline = rememberIsOnline()
+    // Do NOT show ads if offline
+    if (!isOnline) return
+
     Surface(
         modifier = modifier
             .fillMaxWidth()

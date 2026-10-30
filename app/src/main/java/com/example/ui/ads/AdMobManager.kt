@@ -59,14 +59,12 @@ object AdMobConfig {
     // ------------------------------------------------------------------------
     // GOOGLE ADMOB PRODUCTION CONFIGURATION
     // ------------------------------------------------------------------------
-    // Replace these sample IDs with your real AdMob IDs from https://admob.google.com
-    // before publishing to the Google Play Store.
-    // ------------------------------------------------------------------------
-    var APP_ID: String = "ca-app-pub-3940256099942544~3347511713"
-    var BANNER_ID: String = "ca-app-pub-3940256099942544/6300978111"
-    var INTERSTITIAL_ID: String = "ca-app-pub-3940256099942544/1033173712"
-    var REWARDED_ID: String = "ca-app-pub-3940256099942544/5224354917"
-    var APP_OPEN_ID: String = "ca-app-pub-3940256099942544/9257395921"
+    const val APP_ID: String = "ca-app-pub-1922649184647561~4368484793"
+    const val BANNER_ID: String = "ca-app-pub-1922649184647561/9189435123"
+    const val INTERSTITIAL_ID: String = "ca-app-pub-1922649184647561/1530243436"
+    const val NATIVE_ADVANCED_ID: String = "ca-app-pub-1922649184647561/9523838977"
+    const val REWARDED_ID: String = "ca-app-pub-1922649184647561/8884836881"
+    const val APP_OPEN_ID: String = "ca-app-pub-1922649184647561/9140695598"
 }
 
 @Composable

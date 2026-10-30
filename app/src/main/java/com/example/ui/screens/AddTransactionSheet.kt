@@ -61,6 +61,7 @@ import com.example.model.CategoryList
 import com.example.model.CurrencyHelper
 import com.example.model.DateHelper
 import com.example.model.TransactionType
+import com.example.model.toCleanDoubleOrNull
 import com.example.ui.theme.ExpenseRed
 import com.example.ui.theme.IncomeGreen
 import com.example.ui.theme.PrimaryIndigo
@@ -630,7 +631,7 @@ fun AddTransactionSheet(
 
                 Button(
                     onClick = {
-                        val amount = amountText.toDoubleOrNull() ?: 0.0
+                        val amount = amountText.toCleanDoubleOrNull() ?: 0.0
                         if (amount > 0) {
                             val finalCat = if (selectedType == TransactionType.TRANSFER.name) "Transfer" else selectedCategory
                             val finalDesc = description.ifEmpty { finalCat }
@@ -645,6 +646,9 @@ fun AddTransactionSheet(
                                 person.ifBlank { null }
                             )
                             onDismiss()
+                        } else {
+                            val msg = if (language == "bn") "দয়া করে টাকার পরিমাণ লিখুন" else "Please enter a valid amount"
+                            android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
                         }
                     },
                     modifier = Modifier

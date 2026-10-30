@@ -45,6 +45,25 @@ object CategoryList {
     }
 }
 
+fun String.toCleanEnglishDigits(): String {
+    return this.replace('০', '0')
+        .replace('১', '1')
+        .replace('২', '2')
+        .replace('৩', '3')
+        .replace('৪', '4')
+        .replace('৫', '5')
+        .replace('৬', '6')
+        .replace('৭', '7')
+        .replace('৮', '8')
+        .replace('৯', '9')
+        .replace(",", "")
+        .trim()
+}
+
+fun String.toCleanDoubleOrNull(): Double? {
+    return this.toCleanEnglishDigits().toDoubleOrNull()
+}
+
 object QuickAddParser {
     data class ParsedTransaction(
         val type: TransactionType,
@@ -54,12 +73,12 @@ object QuickAddParser {
     )
 
     fun parse(input: String): ParsedTransaction? {
-        val trimmed = input.trim()
-        if (trimmed.isEmpty()) return null
+        val converted = input.toCleanEnglishDigits()
+        if (converted.isEmpty()) return null
 
-        // Match patterns like "Groceries 1200" or "1200 Groceries" or "Salary 30000"
+        // Match patterns like "Groceries 1200" or "1200 Groceries" or "Salary 30000" or "খাবার ৫০০"
         val regex = Regex("""([a-zA-Z\u0980-\u09FF\s&]+?)\s*(\d+(?:\.\d+)?)\b|\b(\d+(?:\.\d+)?)\s*([a-zA-Z\u0980-\u09FF\s&]+)""")
-        val match = regex.find(trimmed)
+        val match = regex.find(converted)
 
         if (match != null) {
             val (desc1, amt1, amt2, desc2) = match.destructured
