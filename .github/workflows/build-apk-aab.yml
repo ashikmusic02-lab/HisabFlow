@@ -16,18 +16,18 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Accept Android SDK Licenses
         run: |
-          yes | sdkmanager --licenses || true
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
 
       - name: Grant Execute Permission for Gradlew
         run: chmod +x gradlew
@@ -47,7 +47,9 @@ jobs:
             -storepass android \
             -keypass android \
             -dname "CN=HisabFlow, OU=Mobile, O=HisabFlow, L=Dhaka, ST=Dhaka, C=BD"
+          cp my-upload-key.jks app/my-upload-key.jks
           cp my-upload-key.jks debug.keystore
+          cp my-upload-key.jks app/debug.keystore
 
       - name: Build Debug & Release APK
         env:
