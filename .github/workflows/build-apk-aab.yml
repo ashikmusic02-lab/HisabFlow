@@ -11,6 +11,10 @@ jobs:
   build:
     name: Generate APK & AAB
     runs-on: ubuntu-latest
+    env:
+      KEYSTORE_PATH: ${{ github.workspace }}/my-upload-key.jks
+      STORE_PASSWORD: "android"
+      KEY_PASSWORD: "android"
 
     steps:
       - name: Checkout Repository
@@ -35,35 +39,41 @@ jobs:
       - name: Ensure .env file exists
         run: touch .env
 
-      - name: Prepare Signing Keystore
+      - name: Generate Debug and Release Keystores
         run: |
-          echo "Generating keystore for release build..."
+          echo "Generating debug keystore with androiddebugkey alias..."
           keytool -genkeypair -v \
-            -keystore my-upload-key.jks \
+            -keystore debug.keystore \
+            -alias androiddebugkey \
+            -storepass android \
+            -keypass android \
             -keyalg RSA \
             -keysize 2048 \
             -validity 10000 \
+            -dname "CN=Android Debug, O=Android, C=US"
+          cp debug.keystore app/debug.keystore
+
+          echo "Generating upload keystore with upload alias..."
+          keytool -genkeypair -v \
+            -keystore my-upload-key.jks \
             -alias upload \
             -storepass android \
             -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
             -dname "CN=HisabFlow, OU=Mobile, O=HisabFlow, L=Dhaka, ST=Dhaka, C=BD"
           cp my-upload-key.jks app/my-upload-key.jks
-          cp my-upload-key.jks debug.keystore
-          cp my-upload-key.jks app/debug.keystore
 
-      - name: Build Debug & Release APK
-        env:
-          KEYSTORE_PATH: ${{ github.workspace }}/my-upload-key.jks
-          STORE_PASSWORD: "android"
-          KEY_PASSWORD: "android"
+      - name: Build Debug APK
         run: |
-          ./gradlew assembleDebug assembleRelease -x test -x lint -x lintVitalRelease --stacktrace
+          ./gradlew assembleDebug -x test -x lint --stacktrace
+
+      - name: Build Release APK
+        run: |
+          ./gradlew assembleRelease -x test -x lint -x lintVitalRelease --stacktrace
 
       - name: Build Google Play AAB (Android App Bundle)
-        env:
-          KEYSTORE_PATH: ${{ github.workspace }}/my-upload-key.jks
-          STORE_PASSWORD: "android"
-          KEY_PASSWORD: "android"
         run: |
           ./gradlew bundleRelease -x test -x lint -x lintVitalRelease --stacktrace
 
