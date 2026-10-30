@@ -11,10 +11,6 @@ jobs:
   build:
     name: Generate APK & AAB
     runs-on: ubuntu-latest
-    env:
-      KEYSTORE_PATH: ${{ github.workspace }}/my-upload-key.jks
-      STORE_PASSWORD: "android"
-      KEY_PASSWORD: "android"
 
     steps:
       - name: Checkout Repository
@@ -41,6 +37,11 @@ jobs:
 
       - name: Generate Debug and Release Keystores
         run: |
+          echo "Setting environment variables..."
+          echo "KEYSTORE_PATH=$GITHUB_WORKSPACE/my-upload-key.jks" >> $GITHUB_ENV
+          echo "STORE_PASSWORD=android" >> $GITHUB_ENV
+          echo "KEY_PASSWORD=android" >> $GITHUB_ENV
+
           echo "Generating debug keystore with androiddebugkey alias..."
           keytool -genkeypair -v \
             -keystore debug.keystore \
@@ -70,10 +71,18 @@ jobs:
           ./gradlew assembleDebug -x test -x lint --stacktrace
 
       - name: Build Release APK
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/my-upload-key.jks
+          STORE_PASSWORD: android
+          KEY_PASSWORD: android
         run: |
           ./gradlew assembleRelease -x test -x lint -x lintVitalRelease --stacktrace
 
       - name: Build Google Play AAB (Android App Bundle)
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/my-upload-key.jks
+          STORE_PASSWORD: android
+          KEY_PASSWORD: android
         run: |
           ./gradlew bundleRelease -x test -x lint -x lintVitalRelease --stacktrace
 
